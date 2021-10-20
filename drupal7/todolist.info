@@ -1,0 +1,4 @@
+name = Todolist
+description = Allows users to create Todolist
+dependencies[] = date
+core = 7.x

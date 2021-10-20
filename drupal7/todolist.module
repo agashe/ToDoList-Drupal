@@ -1,0 +1,253 @@
+<?php
+/**
+ * Implementation of hook_menu().
+ */
+function todolist_menu() {
+  $items = array();
+  
+  $items['todolist/list'] = array( 
+    'title' => 'List All Tasks', 
+    'page callback' => 'todolist_listing_tasks',
+    'access arguments' => array('access todolist'),
+  );
+  $items['todolist/create_task'] = array( 
+    'title' => 'Creat Task', 
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('todolist_create_task_form'), 
+    'access arguments' => array('access todolist'),
+    'file' => 'create_task.inc',
+  );
+  $items['todolist/%/edit_task'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('todolist_edit_task_form'), 
+    'access arguments' => array('access todolist'),
+    'file' => 'edit_task.inc',
+  );
+  $items['todolist/%/delete_task'] = array(
+    'page callback' => 'todolist_delete_task',
+    'page argument' => array(1),
+    'access arguments' => array('access todolist'),
+    'file' => 'delete_task.inc',
+  );
+  $items['todolist/%/close_tasks'] = array(  
+    'page callback' => 'todolist_close_tasks',
+    'page argument' => array(1),
+    'access arguments' => array('close tasks'),
+  );
+  $items['todolist/upload_tasks'] = array( 
+    'title' => 'Upload Tasks', 
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('upload_tasks_form'), 
+    'access arguments' => array('access todolist'),
+    'file' => 'upload_tasks.inc',
+  );
+  
+  $items['todolist/export_tasks'] = array( 
+    'title' => 'Export Tasks', 
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('export_tasks_form'), 
+    'access arguments' => array('access todolist'),
+    'file' => 'export_tasks.inc',
+  );
+
+  return $items;
+}
+
+
+/**
+* Implements hook_permission().
+*/
+function todolist_permission() {
+  return array(
+    'access todolist' => array(
+    'title' => 'TodoList',
+    'description' => 'Customizing the Todolist via the administration settings', 
+    ),
+    'manage all tasks' => array(
+    'title' => 'TodoList',
+    'description' => 'View and manage all tasks', 
+    ),
+    'close tasks' => array(
+      'title' => 'TodoList',
+      'description' => 'Close Users Tasks', 
+      ),
+    );
+  }
+
+
+/**
+ * Implementation of ToDo Listing table.
+ */
+
+function todolist_listing_tasks() {
+  global $user;
+    
+    $header = array(
+    array('data' => 'ID', 'field' => 'tid', 'sort' => 'asc'),
+    array('data' => 'Title', 'field' => 'task_title'),
+    array('data' => 'Status', 'field' => 'status'),
+    array('data' => 'Date', 'field' => 'task_date'),
+    array('data' => 'Action'),
+    );
+    
+    $query = db_select('todolist_task', 'todo');
+    $query->fields('todo', array('tid', 'task_title', 'status', 'task_date'));
+
+    // check if user can manage all tasks
+    if (!user_access('manage all tasks'))
+      $query->condition('task_uid', $user->uid, '=');
+    
+    $table_sort = $query->extend('TableSort') // Add table sort extender.
+                  ->orderByHeader($header); // Add order by headers.
+    $pager = $table_sort->extend('PagerDefault')
+            ->limit(5);
+    $result = $pager->execute();
+    
+    $rows = array();
+    foreach($result as $res){
+      if($res->status == 'closed'){
+        $links_order = l('Delete', 'todolist/'.$res->tid.'/delete_task');
+      }
+      elseif(in_array('close tasks', $user->roles) && user_access('close tasks') && $res->status != 'closed'){ 
+        $links_order = l('Close Task', 'todolist/'.$res->tid.'/close_tasks');
+      }else{
+        $links_order =  l('Edit', 'todolist/'.$res->tid.'/edit_task') .  " | " . l('Delete', 'todolist/'.$res->tid.'/delete_task');
+      }
+      $rows[] = array($res->tid, $res->task_title, $res->status, $res->task_date, $links_order );
+    }
+    
+    // If rows are not empty theme and display the rows.
+    $output = '';
+    if (!empty($rows)) {
+      $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'sort-table')));
+      $output .= theme('pager');
+      $output .= '<br>'.l('Upload Tasks', 'todolist/upload_tasks');
+      $output .= '<br>'.l('Export All Tasks', 'todolist/export_tasks');
+    }
+    else {
+      $output .= "No results found.";
+    }
+    $output .= '<br>'.l('Add new record', 'todolist/create_task');
+
+    return $output;
+  }
+
+/**
+ * Implementation of hook_cron().
+ */
+function todolist_cron(){
+     
+    $tasks = db_select('todolist_task', 'todo')
+    ->fields(('todo'), array('tid', 'task_title', 'status', 'task_date'))
+    ->condition('todo.status', array('new', 'pending'), 'IN')
+    ->execute()
+    ->fetchAll();
+    if($tasks){
+      $separated_tasks = implode(",", array_column($tasks, 'task_title'));
+      $message = "You have not completed these tasks {$separated_tasks} yet, kindly complete it now";
+      $params = array(
+                'body' => $message,
+                'subject' => 'ToDo Tasks',
+                'headers'=>'simple',
+          );
+          $to = "test@test.com";
+          
+          drupal_mail('ToDo', 'send_link', $to, language_default(), $params, variable_get('site_mail'), TRUE);
+    }
+}
+
+
+/**
+ * Implements hook_block_info().
+ */
+function todolist_block_info() {
+  $blocks = array();
+  $blocks['todolist_hp'] = array(
+    'info' => 'Todolist',
+  );
+ return $blocks;
+}
+/**
+ * Implementation of hook_block_view()
+ * Show Today Tasks
+ */
+function todolist_block_view($delta = '') {
+
+    $block = array();
+
+    switch($delta) {
+        case 'todolist_hp':
+            $block['subject'] = 'Latest ToDo Tasks';
+            $block['content'] = todolist_hp_callback();
+            break;
+    }
+
+    return $block;
+}
+
+/**
+ * Implementation of todolist_hp_callback()
+ * Show Today Tasks
+ * 
+ */
+ 
+function todolist_hp_callback() {
+  global $user;
+  
+  if(drupal_is_front_page()){
+  $header = array(
+    array('data' => 'ID', 'field' => 'tid', 'sort' => 'asc'),
+    array('data' => 'Title', 'field' => 'task_title'),
+    array('data' => 'Status', 'field' => 'status'),
+    array('data' => 'Date', 'field' => 'task_date'),
+    );
+    
+    $query = db_select('todolist_task', 'todo');
+    $query->fields('todo', array('tid', 'task_title', 'status', 'task_date'))
+          ->orderBy('task_date', 'DESC')
+          ->range(0, 5);
+    
+    // check if user can manage all tasks
+    if (!user_access('manage all tasks'))
+      $query->condition('task_uid', $user->uid, '=');
+
+    $table_sort = $query->extend('TableSort') // Add table sort extender.
+                  ->orderByHeader($header); // Add order by headers.
+    
+    $result = $table_sort->execute();
+    
+    $rows = array();
+    foreach($result as $res){
+    $rows[] = array($res->tid, $res->task_title, $res->status, $res->task_date);
+    }
+    
+    // If rows are not empty theme and display the rows.
+    $output = '';
+    if (!empty($rows)) {
+    $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'sort-table')));
+    $output .= theme('pager');
+    }
+    else {
+     $output .= "No Tasks For Today.";
+    }
+
+    return $output;
+  }
+}
+
+  /**
+   * The user that has the role and permission for closing the users tasks
+   */
+  function todolist_close_tasks(){
+    $id = arg(1);
+    $data = array(
+        'status' => 'closed',
+    );
+    db_update('todolist_task')
+        ->fields($data)
+        ->condition('tid', $id, '=')
+        ->execute();
+    drupal_set_message('Task has been closed!');
+    drupal_goto('todolist/list');
+  }
+
