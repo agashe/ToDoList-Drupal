@@ -1,0 +1,23 @@
+todolist.index:
+  title: 'List Tasks'
+  description: 'List all tasks'
+  parent: main
+  route_name: todolist.index
+
+todolist.create:
+  title: 'Create Task'
+  description: 'Create task'
+  parent: main
+  route_name: todolist.create
+
+todolist.export:
+  title: 'Export Tasks'
+  description: 'Export tasks'
+  parent: main
+  route_name: todolist.export
+  
+todolist.import:
+  title: 'Import Tasks'
+  description: 'Import tasks'
+  parent: main
+  route_name: todolist.import

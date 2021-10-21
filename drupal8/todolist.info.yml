@@ -1,0 +1,7 @@
+name: Todolist
+type: module
+description: 'Allows users to create Todolist'
+core_version_requirement: ^8 || ^9
+
+dependencies:
+  - drupal:datetime

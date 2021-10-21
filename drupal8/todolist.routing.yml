@@ -1,0 +1,55 @@
+todolist.index:
+  path: '/tasks'
+  defaults:
+    _controller: '\Drupal\todolist\Controller\TodoListController::index'
+    _title: 'List Tasks'
+  requirements:
+    _permission: 'access todolist'
+
+todolist.create:
+  path: '/tasks/create'
+  defaults:
+    _form: '\Drupal\todolist\Form\CreateForm'
+    _title: 'Create Task'
+  requirements:
+    _permission: 'access todolist'
+
+todolist.edit:
+  path: '/tasks/{id}/edit'
+  defaults:
+    _form: '\Drupal\todolist\Form\EditForm'
+    _title: 'Edit Task'
+  requirements:
+    _permission: 'access todolist'
+
+todolist.delete:
+  path: '/tasks/{id}/delete'
+  defaults:
+    _controller: '\Drupal\todolist\Controller\TodoListController::delete'
+    _title: 'Delete Task'
+  requirements:
+    _permission: 'access todolist'
+
+todolist.close:
+  path: '/tasks/{id}/close'
+  defaults:
+    _controller: '\Drupal\todolist\Controller\TodoListController::close'
+    _title: 'Close Task'
+  requirements:
+    _permission: 'close todolist'
+
+todolist.export:
+  path: '/tasks/export'
+  defaults:
+    _form: '\Drupal\todolist\Form\ExportForm'
+    _title: 'Export Task'
+  requirements:
+    _permission: 'access todolist'
+
+todolist.import:
+  path: '/tasks/import'
+  defaults:
+    _form: '\Drupal\todolist\Form\ImportForm'
+    _title: 'Import Task'
+  requirements:
+    _permission: 'access todolist'

@@ -1,0 +1,11 @@
+access todolist:
+  title: TodoList
+  description: Customizing the Todolist via the administration settings
+
+manage all tasks:
+  title: TodoList
+  description: View and manage all tasks
+
+close tasks:
+  title: TodoList
+  description: Close Users Tasks

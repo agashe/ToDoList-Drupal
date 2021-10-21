@@ -1,0 +1,55 @@
+<?php
+/**
+ * @file
+ * todolist installation
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function todolist_schema() {
+  $schema['todolist_task'] = array(
+    'description' => 'The base table for tasks.',
+    'fields' => array(
+      'tid' => array(
+        'description' => 'The primary identifier for a task.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        ),
+      'task_uid' => array(
+        'description' => 'The user_id of the task creator.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        ),
+      'task_title' => array(
+        'description' => 'The task title.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        ),
+      'task_content' => array(
+        'description' => 'The task content.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        ),
+      'status' => array(
+        'description' => 'The task status.',
+        'type' => 'varchar',
+        'length' => 10,
+        'not null' => TRUE,
+        'default' => 'new',
+        ),
+      'task_date' => array(
+        'description' => 'The task created date.',
+        'mysql_type' => 'DATE',
+        'not null' => TRUE,
+        ),
+      ),
+    'primary key' => array('tid'),
+  );
+  return $schema;
+}
